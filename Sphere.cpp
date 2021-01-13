@@ -1,4 +1,20 @@
-#include "Sphere.h"
+/*
+ * Copyright 2018 Illia Shvarov
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "Sphere.hpp"
 
 const string Sphere::getName() const {
 	string name = "Sphere";
@@ -6,11 +22,11 @@ const string Sphere::getName() const {
 	return name;
 }
 
-uint8_t Sphere::execute(const map<string, string>& args) {	//Сделать методом класса Command
-	//Распарсить аргументы для работы с ними
+uint8_t Sphere::execute(const map<string, string>& args) {
+	// Parse the arguments
 	int result = parse(args);
 
-	//Создать треугольники и записать их в массив, записать фигуру в файл
+	// Create a shape and save it
 	STLParser parser = STLParser();
 	const Triangles* triangles = createTriangles();
 
@@ -20,59 +36,55 @@ uint8_t Sphere::execute(const map<string, string>& args) {	//Сделать ме
 } 
 
 uint8_t Sphere::parse(const map<string, string>& args) {
-	//Проверить количество аргументов
+	string key, value;			// Temporary values of map iteration
+	size_t position;			// Temporary variable for storing a position inside of a string
+	vector<size_t> positions;	// Array of positions
+
+	// Check arguments size
 	if (args.size() < MIN_ARGS) std::exit(LESS_ARGS_ERR_CODE);
-
-	string key, value;	//
-	size_t position;	//
-	vector<size_t> positions;	//
-
-	//Распарсить и записать в переменные значения аргументов
 	for (pair<string, string> pair : args) {
 		key = pair.first;
 		value = pair.second;
 
-		//Если рассматриваем длину стороны куба
+		// If the data is a sphere's radius
 		if (key == "R") {
 			radius = stoi(value);
 
-			//Вернуть заданное значение, если длина меньше единицы
+			// Stop the parsing if the radius is incorrect
 			if (radius <= 0) return INCORR_LENGTH_ERR_CODE;
 		}
 
-		//Если рассматриваем точку отсчета
+		// If the data is the origin coordinates
 		else if (key == "origin") {
-			//Находим положение первой разделяющей запятой
 			position = value.find(",");
-
-			//Вектор позиций запятых для разбивки
 			positions = vector<size_t>();
 
-			//Разбить строку координат
+			// Fetching positions of commas
 			while (position != string::npos) {
-				//Добавить позицию запятой
+				// Save the current comma position
 				positions.push_back(position);
 
-				//Получить следующую позицию запятой
+				// Get the next comma position
 				position = value.find(",", position + string(",").size());
 			}
 
-			//Заполнить структуру, хранящую позицию точки отсчета
+			// Save the position of the origin
 			origin.x = stod(value.substr(1, positions[0]));
 			origin.y = stod(value.substr(positions[0] + 1, positions[1]));
 			origin.z = stod(value.substr(positions[1] + 1, value.size() - 1));
 		}
 
-		//Записать имя файла
+		// If the data is amount of slices of a sphere
 		else if (key == "slices") {
 			slices = stoi(value);
 		}
 
+		// If the data is amount of rings of a sphere
 		else if (key == "rings") {
 			rings = stoi(value);
 		}
 
-		//Записать имя файла
+		// Save the output file name
 		else if (key == "filepath") {
 			filepath = value;
 		}
@@ -80,52 +92,46 @@ uint8_t Sphere::parse(const map<string, string>& args) {
 }
 
 const Triangles* Sphere::createTriangles() {
-	//Создать массив (вектор) треугольников для записи в файл
-	Triangles* triangles = new Triangles();
-
-	//Создать временные переменные для хранения промежуточных результатов вычислений
-	Triangle triangle;
-	
-	//Шаг угла (определяется количеством разрезов)
-	double phi_step = (360.0 / slices);
-	double theta_step = (180.0 / rings);
+	Triangles* triangles = new Triangles();		// The sphere as an array of triangles
+	Triangle triangle;							// Temporary variable for triangles
+	double phi_step = (360.0 / slices);			// Angle step
+	double theta_step = (180.0 / rings);		// Angle step
 
 	for (double phi = 0; phi < 360.0; phi += phi_step) {
 		for (double theta = 0; theta < 180.0; theta += theta_step) {
-			//Записать в треугольник три вершины 
-			triangle.push_back(createVertex(phi, theta));	//Первая вершина
-			triangle.push_back(createVertex(phi + phi_step, theta));	//Следующая вершина по горизонтали
-			triangle.push_back(createVertex(phi, theta + theta_step));	//Следующая вершина по вертикали
+			// Create vertexes of a triangle
+			triangle.push_back(createVertex(phi, theta));
+			triangle.push_back(createVertex(phi + phi_step, theta));
+			triangle.push_back(createVertex(phi, theta + theta_step));
 
+			// Store the triangle inside of the array
 			triangles->push_back(triangle);
 
-			//Поменять первую вершину на следующую по диагонали (создаем развернутый треугольник для вормирования полигона)
+			// Creating an oposite triangle to create decrease amounts of steps inside of the loops
 			triangle[0] = createVertex(phi + phi_step, theta + theta_step);
 
+			// Store the triangle inside of the array
 			triangles->push_back(triangle);
 
-			//Очистить массив вершин для нового использования
+			// Delete the temporary triangle
 			triangle.clear();
 		}
 	}
 
-	//Вернуть заполненный массив (вектор) треугольников
 	return triangles;
 }
 
 Vertex Sphere::createVertex(double phi, double theta) {
-	//Создать вершину
 	Vertex vertex = Vertex();
 
-	//Конвертировать значения углов в радианы
+	// Convert the angles to radians
 	phi = phi * PI / 180;
 	theta = theta * PI / 180;
 
-	//Вычислить координаты вершины
+	// Calculate the vertex's coordinates  
 	vertex.position.x = origin.x + (cos(phi) * radius * sin(theta));
 	vertex.position.y = origin.y + (sin(phi) * radius * sin(theta));
 	vertex.position.z = origin.z + (cos(theta) * radius);
 
-	//Вернуть вершину
 	return vertex;
 }

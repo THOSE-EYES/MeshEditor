@@ -1,4 +1,20 @@
-#include "Cube.h"
+/*
+ * Copyright 2018 Illia Shvarov
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "Cube.hpp"
 
 const string Cube::getName() const{
 	string name = "Cube";
@@ -7,10 +23,10 @@ const string Cube::getName() const{
 }
 
 uint8_t Cube::execute(const map<string, string>& args) {
-	//Распарсить аргументы для работы с ними
+	// Parse the arguments
 	parse(args);
 
-	//Создать треугольники и записать их в массив, записать фигуру в файл
+	// Split the object
 	STLParser parser = STLParser();
 	const Triangles* triangles = createTriangles();
 
@@ -20,52 +36,46 @@ uint8_t Cube::execute(const map<string, string>& args) {
 }
 
 uint8_t Cube::parse(const map<string, string>& args) {
-	//Проверить количество аргументов
-	if (args.size() < MIN_ARGS) {
-		return LESS_ARGS_ERR_CODE;
-	}
+	string key, value;			// Temporary values of map iteration
+	size_t position;			// Temporary variable for storing a position inside of a string
+	vector<size_t> positions;	// Array of positions
 
-	string key, value;	//
-	size_t position;	//
-	vector<size_t> positions;	//
+	// Check arguments size
+	if (args.size() < MIN_ARGS) std::exit(LESS_ARGS_ERR_CODE);
 
-	//Распарсить и записать в переменные значения аргументов
 	for (pair<string, string> pair : args) {
 		key = pair.first;
 		value = pair.second;
 
-		//Если рассматриваем длину стороны куба
+		// If the argument is a length of the cube's side
 		if (key == "L") {
 			length = stoi(value);
 			
-			//Вернуть заданное значение, если длина меньше единицы
+			// terminate the execution, if the length is incorrect
 			if (length <= 0) std::exit(INCORR_LENGTH_ERR_CODE);
 		}
 
-		//Если рассматриваем точку отсчета
+		// If the data is the origin coordinates
 		else if (key == "origin") {
-			//Находим положение первой разделяющей запятой
 			position = value.find(",");
-
-			//Вектор позиций запятых для разбивки
 			positions = vector<size_t>();
 
-			//Разбить строку координат
+			// Fetching positions of commas
 			while (position != string::npos) {
-				//Добавить позицию запятой
+				// Save the current comma position
 				positions.push_back(position);
 
-				//Получить следующую позицию запятой
+				// Get the next comma position
 				position = value.find(",", position + string(",").size());
 			}
 
-			//Заполнить структуру, хранящую позицию точки отсчета
+			// Save the position of the origin
 			origin.x = stod(value.substr(1, positions[0]));
 			origin.y = stod(value.substr(positions[0] + 1, positions[1]));
 			origin.z = stod(value.substr(positions[1] + 1, value.size() - 1));
 		}
 
-		//Записать имя файла
+		// Save the output file name
 		else if (key == "filepath") {
 			filepath = value;
 		}
@@ -73,87 +83,84 @@ uint8_t Cube::parse(const map<string, string>& args) {
 }
 
 const Triangles* Cube::createTriangles() {
-	//Создать массив (вектор) треугольников для записи в файл
 	Triangles* triangles = new Triangles();
-
-	//Создать временные переменные для хранения промежуточных результатов вычислений
 	Vertex origin_vertex, f_common, s_common;
 	Triangle triangle;
 
-	//Просчитать точки куба и создать на их основе треугольники (половина куба)
+	// Calculate the vertexes of the cube and create triangles based on them (half of the cube)
 	for (int counter = 0, second_counter = 1; counter < 3 && second_counter < 4; ++counter, ++second_counter) {
-		//second counter служит для перемещения общих точек (одна смещена по оси X, другая - по Y, одна по Y и так далее)
+		// second counter is used to move common points (one is offset along the X axis, the other - along Y, one along Y, and so on)
 		if (second_counter == 3) {
 			second_counter = 0;
 		}
 		
-		//Очистить временные файлы вершины
+		// Clear vertex temporary files
 		f_common.position = { origin.x, origin.y, origin.z };
 		s_common.position = { origin.x, origin.y, origin.z };
 		origin_vertex.position = origin;
 
-		//Сместить две диагональные общие точки грани
+		// Offset two diagonal common points of a face
 		f_common.position[counter] += length;
 		s_common.position[second_counter] += length;
 
-		//Записать точки в треугольник
+		// Write points to the triangle
 		triangle.push_back(f_common);
 		triangle.push_back(s_common);
 		triangle.push_back(origin_vertex);
 
-		//Записать треугольник в вектор треугольников
+		// Write the triangle to the triangle vector
 		triangles->push_back(triangle);
 
-		//Сместить осташуюся вершину (которая не является общей)
+		//Offset Remaining Vertex (which is not shared)
 		triangle[2].position[counter] += length;
 		triangle[2].position[second_counter] += length;
 
-		//Записать новый треугольник в вектор
+		// Write the new triangle to the vector
 		triangles->push_back(triangle);
 
-		//Очистить временный треугольник
+		// Clear the temporary triangle
 		triangle.clear();
 	}
 	
-	//Преместить точку отсчета по диагонали (для отрисовки второй половины куба)
+	// Move the origin diagonally (to draw the second half of the cube)
 	origin.x += length;
 	origin.y += length;
 	origin.z += length;
 
 	//Просчитать точки куба и создать на их основе треугольники (вторая половина куба)
 	for (int counter = 0, second_counter = 1; counter < 3 && second_counter < 4; ++counter, ++second_counter) {
+		// second counter is used to move common points (one is offset along the X axis, the other - along Y, one along Y, and so on)
 		if (second_counter == 3) {
 			second_counter = 0;
 		}
 
-		//Очистить временные файлы вершины
+		// Clear vertex temporary files
 		f_common.position = { origin.x, origin.y, origin.z };
 		s_common.position = { origin.x, origin.y, origin.z };
 		origin_vertex.position = origin;
 
-		//Сместить две диагональные общие точки грани
+		// Offset two diagonal common points of a face
 		f_common.position[counter] -= length;
 		s_common.position[second_counter] -= length;
 
-		//Записать точки в треугольник
+		// Write points to the triangle
 		triangle.push_back(f_common);
 		triangle.push_back(s_common);
 		triangle.push_back(origin_vertex);
 
-		//Записать треугольник в вектор треугольников
+		// Write the triangle to the triangle vector
 		triangles->push_back(triangle);
 
-		//Сместить осташуюся вершину (которая не является общей)
+		//Offset Remaining Vertex (which is not shared)
 		triangle[2].position[counter] -= length;
 		triangle[2].position[second_counter] -= length;
 
-		//Записать новый треугольник в вектор
+		// Write the new triangle to the vector
 		triangles->push_back(triangle);
 
-		//Очистить временный треугольник
+		// Clear the temporary triangle
 		triangle.clear();
 	}
 
-	//Вернуть заполненный массив (вектор) треугольников
 	return triangles;
 }

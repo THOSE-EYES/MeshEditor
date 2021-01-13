@@ -1,4 +1,20 @@
-#include "STLParser.h"
+/*
+ * Copyright 2018 Illia Shvarov
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "STLParser.hpp"
 
 double& Coordinates::operator[] (int index) {
 	switch (index) {
@@ -15,7 +31,8 @@ double& Coordinates::operator[] (int index) {
 			break;
 
 		default:
-			//TODO
+			// Throw an exception 
+
 			break;
 	}
 }
@@ -46,80 +63,86 @@ Coordinates& Coordinates::operator*(double multiplier) {
 
 Triangles* STLParser::read(const string filename) {
 	Triangles* triangles = new Triangles();
-	Triangle  triangle;	//Треугольник
-	Vertex vertex;	//Вершина
-	
-	string line;	//Переменная, хранящая текущую прочитанную строку
-	istringstream iss;	//Строковый поток для разбития строки на токены
-	vector<string> tokens;	//Временная переменная, хранящая разбитую на токены прочитанную строку
+	Triangle  triangle;								// Temporary triangle
+	Vertex vertex;									// Temporary 
+	string line;									// Current line in the file
+	istringstream iss;								// Stream used to split the line
+	vector<string> tokens;							// Temporary variable for tokens
+	fstream in;										// Stream of the current file
 
-	fstream in;	//Файловый поток (для чтения из файла)
+	// Open the file
 	in.open(filename, fstream::in);
 
-	//Если файл некорректен
+	// Quit if the file was not opened
 	if (!(in.is_open())) std::exit(NOT_OPENED) ;
 
-	while (!in.eof() && in.is_open()) {
-		//Получаем строку из файла
+	// Read the whole file
+	while (!in.eof()) {
+		// Getting a line
 		getline(in, line);
 
-		//Пропускаем итерацию, если строка пуста
+		// Don't do anything if the line is empty
 		if (line.size() == 0) continue;
 
-		//Разбиваем строку на части (токены)
+		// Split the line
 		iss = istringstream(line);
 		tokens = vector<string>((istream_iterator<string>(iss)), istream_iterator<string>());
 
-		//Парсим файл, заполняем структуры
+		// Saving triangle's normal
 		if (tokens[0] == "facet") {
 			vertex.normal = { stod(tokens[2]), stod(tokens[3]), stod(tokens[4]) };
 		}
 
-		//Если найдена вершина, записываем ее в массив вершин
+		// Saving triangle's vertex
 		else if (tokens[0] == "vertex") {
 			vertex.position = { stod(tokens[1]), stod(tokens[2]), stod(tokens[3]) };
 
 			triangle.push_back(vertex);
 		}
 
-		//Если заканчивается описание треугольника, записываем его в вектор треугольников
+		// Save the triangle if the description is ended
 		else if(tokens[0] == "endfacet") {
 			triangles->push_back(triangle);
 
-			//Очищаем текущий треугольник
+			// Clear the temporary triangle
 			triangle.clear();
 		}
 	}
 
+	// Close the file after reading
 	in.close();
 
 	return triangles;
 }
 
 void STLParser::write(const Triangles* triangles, const string filename) {
-	fstream out;	//Файловый поток (для чтения из файла)
-	out.open(filename, fstream::out);	//Открываем файл для записи
+	fstream out;	// Output file stream
 
-	//Записываем заголовок файла
+	// Open the file
+	out.open(filename, fstream::out);
+
+	// Writing a header
 	out << "solid test" << endl;
 
-	//Перебираем каждый треугольник в векторе треугольников
+	// Save every triangle
 	for (Triangle triangle : *triangles) {
+		// Don't use normals
 		out << "facet normal 0 0 0" << endl;
 		out << "outer loop" << endl;
 		
-		//Перебираем каждую вершину текущего треугольника
+		// Saving vertexes of the triangle
 		for (Vertex vertex : triangle) {
-			//Записываем координаты каждой вершины треугольника
 			out << "vertex " << vertex.position.x << " " << vertex.position.y << " " << vertex.position.z << endl;
 		}
 
+		// End triangle's section
 		out << "endloop" << endl;
 		out << "endfacet" << endl << endl;
 	}
 
-	//Записываем признак конца фигуры
+	// End the operation
 	out << "endsolid test" << endl;
+	out.close();
 
 	delete triangles;
 }

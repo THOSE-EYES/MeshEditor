@@ -1,40 +1,47 @@
-#include "Application.h"
+/*
+ * Copyright 2018 Illia Shvarov
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "Application.hpp"
 
 void Application::registerCommand(Command* command) {
-	//Добавляем команду в список команд
+	// Adding the command to the list
 	commands.push_back(command);
 }
 
 int Application::execute(int argc, char** argv) {
-	int result = -1;	//Переменная, хранящая результат выполнения команды
+	int result = -1;
+	string argument;							// Temporary variable for arguments
+	map<string, string> arguments_map;
 
-	string argument;	//Переменная, хранящая конвертированные в тип "строка" значения аргументов
-	map<string, string> arguments_map;	//Сбор аргументов в типе "map"
-
-	//Каждый аргумент (кроме первого (сам исполняемый файл) и второго (название фигуры))
+	// Everything except the name of the executable and the command is an argument
 	for (char** argument_ptr = &argv[2]; argument_ptr != &argv[argc]; ++argument_ptr) {
-		//Конвертировать в тип "строка"
 		argument = string(*argument_ptr);
 
-		//Заменить символы слэша в путях Windows
-		//std::replace(итератор начала строки, итератор конца строки, заменяемый символ, замена) - заменяет все найденные символы в строке на указанные
+		// Workaround for Windows
 		replace(argument.begin(), argument.end(), "\\", "/");
 
-		//Вставить в сбор аргументов строку, но разбитую разделителем "="
-		//строка.substr(начало, конец) - возвращает подстроку в заданном интервале
-		//строка.find(элемент) - возвращает индекс элемента в строке, если найден
+		// Save the arguments (key=value format) into the map
 		arguments_map.insert(make_pair(argument.substr(0, argument.find("=")), argument.substr((argument.find("=")) + 1, argument.size())));
 	}
 
-	//Перебрать каждую команду
 	for (Command* command : commands) {
-		//Если имя команды совпадает с желаемым
 		if (command->getName() == argv[1]) {
-			//Выполнить данную команду, записать результат ее выполнения
 			result = command->execute(arguments_map);
 		}
 	}
-
-	//Возвращаем результат выполнения программы
+	
 	return result;
 }
