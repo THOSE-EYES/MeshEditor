@@ -29,9 +29,6 @@ using namespace std;
  */
 #define NOT_OPENED 2
 
-using Triangle = vector<Vertex>;			// Vector of vertexes
-using Triangles = vector<vector<Vertex>>;	// Vector of triangles
-
 /**
  * 
  */
@@ -81,6 +78,10 @@ struct Vertex {
 	Coordinates position;
 	Coordinates normal;
 };
+
+using Triangle = vector<Vertex>;			// Vector of vertexes
+using Triangles = vector<vector<Vertex>>;	// Vector of triangles
+
 
 /**
  * Class for file I/O

@@ -18,7 +18,7 @@
 
 #include <string>
 #include <map>
-#include "STLParser.h"
+#include "STLParser.hpp"
 #include <iostream>
 
 using namespace std;

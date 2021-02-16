@@ -31,7 +31,7 @@ int Application::execute(int argc, char** argv) {
 		argument = string(*argument_ptr);
 
 		// Workaround for Windows
-		replace(argument.begin(), argument.end(), "\\", "/");
+		//replace(argument.begin(), argument.end(), "\\", "/");
 
 		// Save the arguments (key=value format) into the map
 		arguments_map.insert(make_pair(argument.substr(0, argument.find("=")), argument.substr((argument.find("=")) + 1, argument.size())));

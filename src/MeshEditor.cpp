@@ -1,7 +1,7 @@
-#include "Application.h"
-#include "Cube.h"
-#include "Sphere.h"
-#include "Split.h"
+#include "Application.hpp"
+#include "Cube.hpp"
+#include "Sphere.hpp"
+#include "Split.hpp"
 
 
 #include <iostream>
